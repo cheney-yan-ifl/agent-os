@@ -9,8 +9,10 @@ set -e  # Exit on error
 OVERWRITE_INSTRUCTIONS=false
 OVERWRITE_STANDARDS=false
 OVERWRITE_CONFIG=false
+
 CLAUDE_CODE=false
 CURSOR=false
+GITHUB_COPILOT=false
 
 # Base URL for raw GitHub content
 BASE_URL="https://raw.githubusercontent.com/buildermethods/agent-os/main"
@@ -38,6 +40,10 @@ while [[ $# -gt 0 ]]; do
             CURSOR=true
             shift
             ;;
+        --github-copilot)
+            GITHUB_COPILOT=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -47,6 +53,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --overwrite-config          Overwrite existing config.yml"
             echo "  --claude-code               Add Claude Code support"
             echo "  --cursor                    Add Cursor support"
+            echo "  --github-copilot            Add GitHub Copilot support"
             echo "  -h, --help                  Show this help message"
             echo ""
             exit 0
@@ -124,6 +131,19 @@ if [ "$CLAUDE_CODE" = true ]; then
         sed -i.bak '/claude_code:/,/enabled:/ s/enabled: false/enabled: true/' "$INSTALL_DIR/config.yml" && rm "$INSTALL_DIR/config.yml.bak"
     fi
 fi
+
+# Handle Github Copilot installation
+if [ "$GITHUB_COPILOT" = true ]; then
+    echo ""
+    echo "📥 Enabling Github Copilot support..."
+
+    # Only update config to enable github_copilot
+    if [ -f "$INSTALL_DIR/config.yml" ]; then
+        sed -i.bak '/github_copilot:/,/enabled:/ s/enabled: false/enabled: true/' "$INSTALL_DIR/config.yml" && rm "$INSTALL_DIR/config.yml.bak"
+        echo "  ✓ Github Copilot enabled in configuration"
+    fi
+fi
+
 
 # Handle Cursor installation
 if [ "$CURSOR" = true ]; then
