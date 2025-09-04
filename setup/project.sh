@@ -11,6 +11,7 @@ OVERWRITE_INSTRUCTIONS=false
 OVERWRITE_STANDARDS=false
 CLAUDE_CODE=false
 CURSOR=false
+GITHUB_COPILOT=false
 PROJECT_TYPE=""
 
 # Parse command line arguments
@@ -36,6 +37,10 @@ while [[ $# -gt 0 ]]; do
             CURSOR=true
             shift
             ;;
+        --github-copilot)
+            GITHUB_COPILOT=true
+            shift
+            ;;
         --project-type=*)
             PROJECT_TYPE="${1#*=}"
             shift
@@ -49,6 +54,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --overwrite-standards       Overwrite existing standards files"
             echo "  --claude-code               Add Claude Code support"
             echo "  --cursor                    Add Cursor support"
+            echo "  --github-copilot            Add GitHub Copilot support"
             echo "  --project-type=TYPE         Use specific project type for installation"
             echo "  -h, --help                  Show this help message"
             echo ""
@@ -237,6 +243,34 @@ if [ "$CLAUDE_CODE" = true ]; then
     fi
 fi
 
+# Handle GitHub Copilot installation for project
+if [ "$GITHUB_COPILOT" = true ]; then
+    echo ""
+    echo "📥 Installing GitHub Copilot support..."
+    mkdir -p "./.copilot/prompts"
+
+    if [ "$IS_FROM_BASE" = true ]; then
+        # Copy from base installation
+        echo "  📂 Prompts:"
+        for cmd in analyze-product create-spec create-tasks execute-tasks plan-product; do
+            if [ -f "$BASE_AGENT_OS/github-copilot-prompts/${cmd}.prompt.md" ]; then
+                copy_file "$BASE_AGENT_OS/github-copilot-prompts/${cmd}.prompt.md" "./.copilot/prompts/${cmd}.prompt.md" "false" "prompts/${cmd}.prompt.md"
+            else
+                echo "  ⚠️  Warning: ${cmd}.prompt.md not found in base installation"
+            fi
+        done
+    else
+        # Download from GitHub when using --no-base
+        echo "  Downloading Copilot prompt files from GitHub..."
+        for cmd in analyze-product create-spec create-tasks execute-tasks plan-product; do
+            download_file "${BASE_URL}/.github/prompts/${cmd}.md" \
+                "./.copilot/prompts/${cmd}.prompt.md" \
+                "false" \
+                "prompts/${cmd}.prompt.md"
+        done
+    fi
+fi
+
 # Handle Cursor installation for project
 if [ "$CURSOR" = true ]; then
     echo ""
@@ -280,9 +314,11 @@ if [ "$CLAUDE_CODE" = true ]; then
     echo "   .claude/commands/          - Claude Code commands"
     echo "   .claude/agents/            - Claude Code specialized agents"
 fi
-
 if [ "$CURSOR" = true ]; then
     echo "   .cursor/rules/             - Cursor command rules"
+fi
+if [ "$GITHUB_COPILOT" = true ]; then
+    echo "   .copilot/prompts/          - GitHub Copilot prompt templates"
 fi
 
 echo ""
@@ -300,12 +336,21 @@ if [ "$CLAUDE_CODE" = true ]; then
     echo ""
 fi
 
+
 if [ "$CURSOR" = true ]; then
     echo "Cursor useage:"
     echo "  @plan-product    - Set the mission & roadmap for a new product"
     echo "  @analyze-product - Set up the mission and roadmap for an existing product"
     echo "  @create-spec     - Create a spec for a new feature"
     echo "  @execute-tasks   - Build and ship code for a new feature"
+    echo ""
+fi
+if [ "$GITHUB_COPILOT" = true ]; then
+    echo "GitHub Copilot usage:"
+    echo "  #plan-product    - Set the mission & roadmap for a new product (Copilot prompt)"
+    echo "  #analyze-product - Set up the mission and roadmap for an existing product (Copilot prompt)"
+    echo "  #create-spec     - Create a spec for a new feature (Copilot prompt)"
+    echo "  #execute-tasks   - Build and ship code for a new feature (Copilot prompt)"
     echo ""
 fi
 

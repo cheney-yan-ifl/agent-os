@@ -9,8 +9,10 @@ set -e  # Exit on error
 OVERWRITE_INSTRUCTIONS=false
 OVERWRITE_STANDARDS=false
 OVERWRITE_CONFIG=false
+
 CLAUDE_CODE=false
 CURSOR=false
+GITHUB_COPILOT=false
 
 # Base URL for raw GitHub content
 BASE_URL="https://raw.githubusercontent.com/buildermethods/agent-os/main"
@@ -38,6 +40,10 @@ while [[ $# -gt 0 ]]; do
             CURSOR=true
             shift
             ;;
+        --github-copilot)
+            GITHUB_COPILOT=true
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -47,6 +53,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --overwrite-config          Overwrite existing config.yml"
             echo "  --claude-code               Add Claude Code support"
             echo "  --cursor                    Add Cursor support"
+            echo "  --github-copilot            Add GitHub Copilot support"
             echo "  -h, --help                  Show this help message"
             echo ""
             exit 0
@@ -104,7 +111,7 @@ download_file "${BASE_URL}/setup/project.sh" \
     "setup/project.sh"
 chmod +x "$INSTALL_DIR/setup/project.sh"
 
-# Handle Claude Code installation
+## Handle Claude Code installation
 if [ "$CLAUDE_CODE" = true ]; then
     echo ""
     echo "📥 Downloading Claude Code agent templates..."
@@ -125,7 +132,30 @@ if [ "$CLAUDE_CODE" = true ]; then
     fi
 fi
 
-# Handle Cursor installation
+## Handle GitHub Copilot installation
+if [ "$GITHUB_COPILOT" = true ]; then
+    echo ""
+    echo "📥 Enabling GitHub Copilot support..."
+    mkdir -p "$INSTALL_DIR/github-copilot-prompts"
+
+    # Download all .github/prompts/* files and rename to <command>.prompt.md
+    PROMPT_LIST_URL="${BASE_URL}/.github/prompts/"
+    # List of commands to support (update as needed)
+    for cmd in analyze-product create-spec create-tasks execute-tasks plan-product; do
+        download_file "${BASE_URL}/.github/prompts/${cmd}.md" \
+            "$INSTALL_DIR/github-copilot-prompts/${cmd}.prompt.md" \
+            "false" \
+            "github-copilot-prompts/${cmd}.prompt.md"
+    done
+
+    # Update config to enable github_copilot
+    if [ -f "$INSTALL_DIR/config.yml" ]; then
+        sed -i.bak '/github_copilot:/,/enabled:/ s/enabled: false/enabled: true/' "$INSTALL_DIR/config.yml" && rm "$INSTALL_DIR/config.yml.bak"
+        echo "  ✓ GitHub Copilot enabled in configuration"
+    fi
+fi
+
+## Handle Cursor installation
 if [ "$CURSOR" = true ]; then
     echo ""
     echo "📥 Enabling Cursor support..."
@@ -162,6 +192,9 @@ echo "   $INSTALL_DIR/setup/project.sh   - Project installation script"
 
 if [ "$CLAUDE_CODE" = true ]; then
     echo "   $INSTALL_DIR/claude-code/agents/ - Claude Code agent templates"
+fi
+if [ "$GITHUB_COPILOT" = true ]; then
+    echo "   $INSTALL_DIR/github-copilot-prompts/ - GitHub Copilot prompt templates"
 fi
 
 echo ""
